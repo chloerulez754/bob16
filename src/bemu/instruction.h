@@ -15,7 +15,6 @@ typedef enum Instruction {
     INS_BR,
     INS_JMP,
     INS_JSR,
-    INS_JSSR,
     INS_LEA,
     INS_RET,
     INS_TRAP,
