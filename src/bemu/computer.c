@@ -159,22 +159,183 @@ int testDecode(BOB16 *bob16) {
 }
 
 int testNOPInstruction(BOB16 *bob16) {
+    bobWord NOP = 0x0000;
+
+    bob16->ram.memory[0] = NOP;
+
+    BOB16 ogBob16;
+    memcpy(&ogBob16, bob16, sizeof(BOB16));
+
+    ogBob16.cpu.programCounter++;
+
+    clockCycle(bob16);
+
+    if (memcmp(&ogBob16, bob16, sizeof(BOB16)) != 0) return 1;
+
     return 0;
 }
 
 int testADDInstruction(BOB16 *bob16) {
-    //                     0b0001,mddd,zzzo,ooii
-
     // reg = reg + reg
-    bob16->cpu.regFile[0] = 15;
+    bob16->cpu.regFile[1] = 25;
+    bob16->cpu.regFile[2] = 15;
+    bob16->ram.memory[0] = 0x1012;
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 40) {
+        fprintf(stderr, "`reg = reg + reg` does not work\n");
+        fprintf(stderr, "r0 should be 40, r0 is %d\n", bob16->cpu.regFile[0]);
+        return 1;
+    }
+
+    // reg = reg + imm
+    bob16->cpu.regFile[1] = 25;
+    bob16->ram.memory[1] = 0x1415;
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 30) {
+        fprintf(stderr, "`reg = reg + imm` does not work\n");
+        fprintf(stderr, "r0 should be 30, r0 is %d\n", bob16->cpu.regFile[0]);
+        return 1;
+    }
+
+    // reg += reg
+    bob16->cpu.regFile[0] = 25;
     bob16->cpu.regFile[1] = 15;
-    bob16->ram.memory[0] = 0b0001,0010,0000,0100;
-    // execute(bob16, INS_ADD);
+    bob16->ram.memory[2] = 0x1810;
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 40) {
+        fprintf(stderr, "`reg += reg` does not work\n");
+        fprintf(stderr, "r0 should be 40, r0 is %d\n", bob16->cpu.regFile[0]);
+        return 1;
+    }
+
+    // reg += imm
+    bob16->cpu.regFile[0] = 25;
+    bob16->ram.memory[3] = 0x1C05;
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 30) {
+        fprintf(stderr, "`reg += imm` does not work\n");
+        fprintf(stderr, "r0 should be 30, r0 is %d\n", bob16->cpu.regFile[0]);
+        return 1;
+    }
+
     return 0;
 }
 
 int testANDInstruction(BOB16 *bob16) {
-    //                     0b0001,mddd,zzzo,ooii
+    // reg = reg & reg
+    bob16->cpu.regFile[1] = 25;
+    bob16->cpu.regFile[2] = 15;
+    bob16->ram.memory[0] = 0x2012;
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 9) {
+        fprintf(stderr, "`reg = reg & reg` does not work\n");
+        fprintf(stderr, "r0 should be 9, r0 is %d\n", bob16->cpu.regFile[0]);
+        return 1;
+    }
+
+    // reg = reg & imm
+    bob16->cpu.regFile[1] = 25;
+    bob16->ram.memory[1] = 0x2415;
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 1) {
+        fprintf(stderr, "`reg = reg & imm` does not work\n");
+        fprintf(stderr, "r0 should be 1, r0 is %d\n", bob16->cpu.regFile[0]);
+        return 1;
+    }
+
+    // reg &= reg
+    bob16->cpu.regFile[0] = 25;
+    bob16->cpu.regFile[1] = 15;
+    bob16->ram.memory[2] = 0x2810;
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 9) {
+        fprintf(stderr, "`reg &= reg` does not work\n");
+        fprintf(stderr, "r0 should be 9, r0 is %d\n", bob16->cpu.regFile[0]);
+        return 1;
+    }
+
+    // reg &= imm
+    bob16->cpu.regFile[0] = 25;
+    bob16->ram.memory[3] = 0x2C05;
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 1) {
+        fprintf(stderr, "`reg &= imm` does not work\n");
+        fprintf(stderr, "r0 should be 1, r0 is %d\n", bob16->cpu.regFile[0]);
+        return 1;
+    }
+
+    return 0;
+}
+
+int testNOTInstruction(BOB16 *bob16) {
+    // reg = ~reg
+    bob16->cpu.regFile[1] = 0xF0F0;
+    bob16->ram.memory[0] = 0x3010;
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 0x0F0F) {
+        fprintf(stderr, "`reg = ~reg` does not work\n");
+        fprintf(stderr, "r0 should be 0x0F0F, r0 is %X\n", bob16->cpu.regFile[0]);
+        return 1;
+    }
+
+    // reg = ~imm
+    bob16->ram.memory[0] = 0x3405;
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 0xFFFA) {
+        fprintf(stderr, "`reg = ~imm` does not work\n");
+        fprintf(stderr, "r0 should be 0xFFFA, r0 is %X\n", bob16->cpu.regFile[0]);
+        return 1;
+    }
+
+    // ~=reg
+    bob16->cpu.regFile[0] = 0x0F0F;
+    bob16->ram.memory[1] = 0x3800; // not r0
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 0xF0F0) {
+        fprintf(stderr, "`~=reg` does not work\n");
+        fprintf(stderr, "r0 should be 0xF0F0, r0 is %d\n", bob16->cpu.regFile[0]);
+        return 1;
+    }
+    return 0;
+}
+
+int testLDInstruction(BOB16 *bob16) {
+    return 0;
+}
+
+int testLDIInstruction(BOB16 *bob16) {
+    return 0;
+}
+
+int testLDRInstruction(BOB16 *bob16) {
+    return 0;
+}
+
+int testSTInstruction(BOB16 *bob16) {
+    return 0;
+}
+
+int testSTIInstruction(BOB16 *bob16) {
+    return 0;
+}
+
+int testSTRInstruction(BOB16 *bob16) {
+    return 0;
+}
+
+int testBRInstruction(BOB16 *bob16) {
+    return 0;
+}
+
+int testJMPInstruction(BOB16 *bob16) {
+    return 0;
+}
+
+int testJSRInstruction(BOB16 *bob16) {
+    return 0;
+}
+
+int testRETInstruction(BOB16 *bob16) {
     return 0;
 }
 
@@ -211,6 +372,80 @@ int main() {
     }
 
     initBOB16(&bob16);
+
+    if (testNOTInstruction(&bob16)) {
+        fprintf(stderr, "NOT instruction doesn't work\n");
+    }
+
+    initBOB16(&bob16);
+
+    // TODO: Make all the rest of the integration tests 
+
+    if (testLDInstruction(&bob16)) {
+        fprintf(stderr, "NOP instruction doesn't work\n");
+        hadError = 1;
+    }
+
+    initBOB16(&bob16);
+
+    if (testLDIInstruction(&bob16)) {
+        fprintf(stderr, "ADD instruction doesn't work\n");
+        hadError = 1;
+    }
+
+    initBOB16(&bob16);
+
+    if (testLDRInstruction(&bob16)) {
+        fprintf(stderr, "AND instruction doesn't work\n");
+        hadError = 1;
+    }
+
+    initBOB16(&bob16);
+
+    if (testSTInstruction(&bob16)) {
+        fprintf(stderr, "NOT instruction doesn't work\n");
+    }
+
+    initBOB16(&bob16);
+
+    if (testSTIInstruction(&bob16)) {
+        fprintf(stderr, "NOP instruction doesn't work\n");
+        hadError = 1;
+    }
+
+    initBOB16(&bob16);
+
+    if (testSTRInstruction(&bob16)) {
+        fprintf(stderr, "ADD instruction doesn't work\n");
+        hadError = 1;
+    }
+
+    initBOB16(&bob16);
+
+    if (testBRInstruction(&bob16)) {
+        fprintf(stderr, "AND instruction doesn't work\n");
+        hadError = 1;
+    }
+
+    initBOB16(&bob16);
+
+    if (testJMPInstruction(&bob16)) {
+        fprintf(stderr, "NOT instruction doesn't work\n");
+    }
+
+    initBOB16(&bob16);
+
+    if (testJSRInstruction(&bob16)) {
+        fprintf(stderr, "NOP instruction doesn't work\n");
+        hadError = 1;
+    }
+
+    initBOB16(&bob16);
+
+    if (testRETInstruction(&bob16)) {
+        fprintf(stderr, "ADD instruction doesn't work\n");
+        hadError = 1;
+    }
 
     if (!hadError) {
         printf("No errors found\n");
