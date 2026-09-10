@@ -101,6 +101,12 @@ static void notInstruction(BOB16 *bob16, bobWord word) {
     }
 }
 
+static void ldInstruction(BOB16 *bob16, bobWord word) {
+    size_t dest = word >> 9 & 0x7;
+    size_t offset = signExtend(word & 0x1FF, 9);
+    bob16->cpu.regFile[dest] = bob16->ram.memory[bob16->cpu.programCounter + offset];
+}
+
 static void execute(BOB16 *bob16) {
     bobWord word = bob16->ram.memory[bob16->cpu.programCounter++];
     switch (getOpcode(word)) {
@@ -116,6 +122,7 @@ static void execute(BOB16 *bob16) {
             notInstruction(bob16, word);
             break;
         case INS_LD:
+            ldInstruction(bob16, word);
             return;
         case INS_LDI:
             return;
@@ -296,6 +303,13 @@ int testNOTInstruction(BOB16 *bob16) {
 }
 
 int testLDInstruction(BOB16 *bob16) {
+    bob16->ram.memory[0] = 0x4005;
+    bob16->ram.memory[6] = 0x0040;
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 0x0040) {
+        fprintf(stderr, "ld doesn't work\n");
+        fprintf(stderr, "r0 should be 0x40, r0 is %X\n", bob16->cpu.regFile[0]);
+    }
     return 0;
 }
 
