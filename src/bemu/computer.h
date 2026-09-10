@@ -2,7 +2,6 @@
 #define _BOB16_COMPUTER_H
 
 #include <stdint.h>
-#include <string.h>
 
 #define REG_COUNT 8
 #define RAM_MAX 0x10000

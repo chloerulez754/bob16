@@ -46,13 +46,12 @@ test-bemu: $(BUILD_DIR)/$(TEST_DIR)/$(BEMU)/test_bemu
 	-@$(BUILD_DIR)/$(TEST_DIR)/$(BEMU)/test_bemu
 	@echo ==============BEMU TEST RESULTS ENDED==============
 
-$(BUILD_DIR)/$(TEST_DIR)/$(BASM)/test_basm: $(TEST_DIR)/$(BASM)/main.c
+$(BUILD_DIR)/$(TEST_DIR)/$(BASM)/test_basm: $(SRC_DIR)/$(BASM)/main.c
 	mkdir -p $(BUILD_DIR)/$(TEST_DIR)/$(BASM)
-	$(CC) $(CFLAGS) -o $(BUILD_DIR)/$(TEST_DIR)/$(BASM)/test_basm $(TEST_DIR)/$(BASM)/main.c
+	$(CC) $(CFLAGS) -o $(BUILD_DIR)/$(TEST_DIR)/$(BASM)/test_basm $(SRC_DIR)/$(BASM)/main.c
 
-$(BUILD_DIR)/$(TEST_DIR)/$(BEMU)/test_bemu: $(TEST_DIR)/$(BEMU)/main.c $(SRC_DIR)/$(BEMU)/computer.c
+$(BUILD_DIR)/$(TEST_DIR)/$(BEMU)/test_bemu: $(SRC_DIR)/$(BEMU)/computer.c
 	mkdir -p $(BUILD_DIR)/$(TEST_DIR)/$(BEMU)
-	$(CC) $(CFLAGS) -o $(BUILD_DIR)/$(TEST_DIR)/$(BEMU)/test_bemu $(TEST_DIR)/$(BEMU)/main.c \
-		$(SRC_DIR)/$(BEMU)/computer.c
+	$(CC) $(CFLAGS) -DTEST -o $(BUILD_DIR)/$(TEST_DIR)/$(BEMU)/test_bemu $(SRC_DIR)/$(BEMU)/computer.c
 
 .PHONY: clean basm bemu run-basm run-bemu test-basm test-bemu test
