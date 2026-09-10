@@ -70,7 +70,7 @@ static void andInstruction(BOB16 *bob16, bobWord word) {
             break;
         case 1:
             // dest = reg & imm
-            imm = signExtend(word & 0xF, 4);
+            imm = word & 0xF;
             bob16->cpu.regFile[dest] = bob16->cpu.regFile[reg] & imm;
             break;
         case 2:
@@ -79,9 +79,25 @@ static void andInstruction(BOB16 *bob16, bobWord word) {
             break;
         case 3:
             // dest &= imm
-            imm = signExtend(word & 0x7F, 7);
+            imm = word & 0x7F;
             bob16->cpu.regFile[dest] &= imm;
             break;
+    }
+}
+
+static void notInstruction(BOB16 *bob16, bobWord word) {
+    if ((word >> 11 & 1) == 0) {
+        size_t dest = (word >> 7) & 0x7;
+        if ((word >> 10 & 1) == 0) {
+            size_t src = (word >> 4) & 0x7;
+            bob16->cpu.regFile[dest] = ~bob16->cpu.regFile[src];
+        } else {
+            bobWord imm = word & 0x7F;
+            bob16->cpu.regFile[dest] = ~imm;
+        }
+    } else {
+        size_t dest = (word >> 8) & 0x7;
+        bob16->cpu.regFile[dest] = ~bob16->cpu.regFile[dest];
     }
 }
 
@@ -97,6 +113,7 @@ static void execute(BOB16 *bob16) {
             andInstruction(bob16, word);
             return;
         case INS_NOT:
+            notInstruction(bob16, word);
             break;
         case INS_LD:
             return;
@@ -258,21 +275,21 @@ int testNOTInstruction(BOB16 *bob16) {
     }
 
     // reg = ~imm
-    bob16->ram.memory[0] = 0x3405;
+    bob16->ram.memory[1] = 0x347A;
     clockCycle(bob16);
-    if (bob16->cpu.regFile[0] != 0xFFFA) {
+    if (bob16->cpu.regFile[0] != ~0x7A) {
         fprintf(stderr, "`reg = ~imm` does not work\n");
-        fprintf(stderr, "r0 should be 0xFFFA, r0 is %X\n", bob16->cpu.regFile[0]);
+        fprintf(stderr, "r0 should be 0xFF85, r0 is %X\n", bob16->cpu.regFile[0]);
         return 1;
     }
 
     // ~=reg
     bob16->cpu.regFile[0] = 0x0F0F;
-    bob16->ram.memory[1] = 0x3800; // not r0
+    bob16->ram.memory[2] = 0x3800; // not r0
     clockCycle(bob16);
-    if (bob16->cpu.regFile[0] != 0xF0F0) {
+    if (bob16->cpu.regFile[0] != ~0x0F0F) {
         fprintf(stderr, "`~=reg` does not work\n");
-        fprintf(stderr, "r0 should be 0xF0F0, r0 is %d\n", bob16->cpu.regFile[0]);
+        fprintf(stderr, "r0 should be 0xF0F0, r0 is %X\n", bob16->cpu.regFile[0]);
         return 1;
     }
     return 0;
@@ -347,6 +364,7 @@ int main() {
 
     if (testNOTInstruction(&bob16)) {
         fprintf(stderr, "NOT instruction doesn't work\n");
+        hadError = 1;
     }
 
     initBOB16(&bob16);
@@ -376,6 +394,7 @@ int main() {
 
     if (testSTInstruction(&bob16)) {
         fprintf(stderr, "NOT instruction doesn't work\n");
+        hadError = 1;
     }
 
     initBOB16(&bob16);
@@ -403,6 +422,7 @@ int main() {
 
     if (testJMPInstruction(&bob16)) {
         fprintf(stderr, "NOT instruction doesn't work\n");
+        hadError = 1;
     }
 
     initBOB16(&bob16);
