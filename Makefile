@@ -15,16 +15,19 @@ basm: $(BUILD_DIR)/$(BASM)/$(BASM)
 
 bemu: $(BUILD_DIR)/$(BEMU)/$(BEMU)
 
-$(BUILD_DIR)/$(BASM)/$(BASM): $(SRC_DIR)/$(BASM)/main.c $(SRC_DIR)/$(BASM)/cpu.c
+$(BUILD_DIR)/$(BASM)/$(BASM): $(SRC_DIR)/$(BASM)/main.c
 	mkdir -p $(BUILD_DIR)/$(BASM)
-	$(CC) $(CFLAGS) -o $(BUILD_DIR)/$(BASM)/$(BASM) $(SRC_DIR)/$(BASM)/main.c $(SRC_DIR)/$(BASM)/cpu.c
+	$(CC) $(CFLAGS) -o $(BUILD_DIR)/$(BASM)/$(BASM) $(SRC_DIR)/$(BASM)/main.c
 
-$(BUILD_DIR)/$(BEMU)/$(BEMU): $(SRC_DIR)/$(BEMU)/main.c
+$(BUILD_DIR)/$(BEMU)/$(BEMU): $(SRC_DIR)/$(BEMU)/main.c $(SRC_DIR)/$(BEMU)/computer.c
 	mkdir -p $(BUILD_DIR)/$(BEMU)
-	$(CC) $(CFLAGS) -o $(BUILD_DIR)/$(BEMU)/$(BEMU) $(SRC_DIR)/$(BEMU)/main.c
+	$(CC) $(CFLAGS) -o $(BUILD_DIR)/$(BEMU)/$(BEMU) $(SRC_DIR)/$(BEMU)/main.c $(SRC_DIR)/$(BEMU)/computer.c
 
 run-basm: basm
 	$(BUILD_DIR)/$(BASM)/$(BASM) $(ARGS)
 
 run-bemu: bemu
 	$(BUILD_DIR)/$(BEMU)/$(BEMU) $(ARGS)
+
+clean:
+	rm -rf $(BUILD_DIR)
