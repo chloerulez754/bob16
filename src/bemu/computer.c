@@ -46,11 +46,41 @@ static void addInstruction(BOB16 *bob16, bobWord word) {
             bob16->cpu.regFile[dest] = bob16->cpu.regFile[reg] + imm;
             break;
         case 2:
+            // dest += reg
             bob16->cpu.regFile[dest] += bob16->cpu.regFile[reg];
             break;
         case 3:
+            // dest += imm
             imm = signExtend(word & 0x7F, 7);
             bob16->cpu.regFile[dest] += imm;
+            break;
+    }
+}
+
+static void andInstruction(BOB16 *bob16, bobWord word) {
+    size_t dest = (word >> 7) & 0x7;
+    size_t reg = (word >> 4) & 0x7;
+    bobWord imm;
+
+    switch ((word >> 10) & 3) {
+        case 0:
+            // dest = reg & reg1
+            size_t reg1 = (word >> 1) & 0x7;
+            bob16->cpu.regFile[dest] = bob16->cpu.regFile[reg] & bob16->cpu.regFile[reg1];
+            break;
+        case 1:
+            // dest = reg & imm
+            imm = signExtend(word & 0xF, 4);
+            bob16->cpu.regFile[dest] = bob16->cpu.regFile[reg] & imm;
+            break;
+        case 2:
+            // dest &= reg
+            bob16->cpu.regFile[dest] &= bob16->cpu.regFile[reg];
+            break;
+        case 3:
+            // dest &= imm
+            imm = signExtend(word & 0x7F, 7);
+            bob16->cpu.regFile[dest] &= imm;
             break;
     }
 }
@@ -64,6 +94,7 @@ static void execute(BOB16 *bob16) {
             addInstruction(bob16, word);
             return;
         case INS_AND:
+            andInstruction(bob16, word);
             return;
         case INS_NOT:
             break;
@@ -171,11 +202,11 @@ int testADDInstruction(BOB16 *bob16) {
 
 int testANDInstruction(BOB16 *bob16) {
     // reg = reg & reg
-    bob16->cpu.regFile[1] = 25;
-    bob16->cpu.regFile[2] = 15;
-    bob16->ram.memory[0] = 0x2012;
+    bob16->cpu.regFile[1] = 0xFFFF;
+    bob16->cpu.regFile[2] = 0x0F0F;
+    bob16->ram.memory[0] = 0x2014;
     clockCycle(bob16);
-    if (bob16->cpu.regFile[0] != 9) {
+    if (bob16->cpu.regFile[0] != 0x0F0F) {
         fprintf(stderr, "`reg = reg & reg` does not work\n");
         fprintf(stderr, "r0 should be 9, r0 is %d\n", bob16->cpu.regFile[0]);
         return 1;
