@@ -25,11 +25,11 @@ imm is a 4-bit signed number (min: -8, max: 7)
 e.g. `add r0 r1 r2` OR `add r0 r1 5`
 
 0b0001_0mdd_dzzz_oooi
-m: mode 0=reg 1=imm
-d: dest reg
-z: src0 reg
-o: src1 reg/imm
-i: 0/imm
+m: mode 0=reg 1=imm;
+d: dest reg;
+z: src0 reg;
+o: src1 reg/imm;
+i: 0/imm;
 
 
 ADD -> dest += src
@@ -38,10 +38,10 @@ imm is a 7-bit signed number (min: -64, max: 63)
 e.g. `add r0 r1` OR `add r0 5`
 
 0b0001_1mdd_dsss_iiii
-m: mode 0=reg 1=imm
-d: dest
-s: src/imm
-i: 0/imm
+m: mode 0=reg 1=imm;
+d: dest;
+s: src/imm;
+i: 0/imm;
 
 
 AND -> dest = src0 & src1
@@ -50,11 +50,11 @@ imm is a 4-bit signed number (min: -8, max: 7)
 e.g. `and r0 r1 r2` OR `and r0 r1 5`
 
 0b0010_0mdd_dzzz_oooi
-m: mode 0=reg 1=imm
-d: dest
-z: src0
-o: src1/imm
-i: 0/imm
+m: mode 0=reg 1=imm;
+d: dest;
+z: src0;
+o: src1/imm;
+i: 0/imm;
 
 
 AND -> dest &= src
@@ -63,10 +63,10 @@ imm is a 7-bit signed number (min: -64, max: 63)
 e.g. `and r0 r1` OR `and r0 5`
 
 0b0010_1mdd_dsss_iiii
-m: mode 0=reg 1=imm
-d: dest
-s: src/imm
-i: 0/imm
+m: mode 0=reg 1=imm;
+d: dest;
+s: src/imm;
+i: 0/imm;
 
 
 NOT -> dest = ~src
@@ -75,10 +75,10 @@ imm is a 7-bit signed number (min: -64, max: 63)
 e.g. `not r0 r1` OR `not r0 5`
 
 0b0011_0mdd_dsss_iiii
-m: mode 0=reg 1=imm
-d: dest
-s: src/imm
-i: 0/imm
+m: mode 0=reg 1=imm;
+d: dest;
+s: src/imm;
+i: 0/imm;
 
 
 NOT -> ~dest
@@ -86,7 +86,7 @@ dest can NOT be an immediate value
 e.g. `not r0`
 
 0b0011_1ddd_0000_0000
-d: dest
+d: dest;
 
 
 
@@ -97,8 +97,8 @@ imm is a 9-bit signed number (min: -256, max: 255)
 e.g. `ld r0 5`
 
 0b0100_dddi_iiii_iiii
-d: dest
-i: imm
+d: dest;
+i: imm;
 
 
 LDI -> dest = ram[ram[pc + imm]]
@@ -106,8 +106,8 @@ imm is a 9-bit signed number (min: -256, max: 255)
 e.g. `ldi r0 5`
 
 0b0101_dddi_iiii_iiii
-d: dest
-i: imm
+d: dest;
+i: imm;
 
 
 LDR -> dest = ram[src + imm]
@@ -115,9 +115,9 @@ imm is a 6-bit signed number (min: -32, max: 31)
 e.g. `ldr r0 r1 5`
 
 0b0110_ddds_ssii_iiii
-d: dest
-s: src
-i: imm
+d: dest;
+s: src;
+i: imm;
 
 
 ST -> ram[pc + imm] = src
@@ -125,8 +125,8 @@ imm is a 9-bit signed number (min: -256, max: 255)
 e.g. `st r0 5`
 
 0b0111_sssi_iiii_iiii
-s: src
-i: imm
+s: src;
+i: imm;
 
 
 STI -> ram[ram[pc + imm]] = src
@@ -134,8 +134,8 @@ imm is a 9-bit signed number (min: -256, max: 255)
 e.g. `sti r0 5`
 
 0b1000_sssi_iiii_iiii
-s: src
-i: imm
+s: src;
+i: imm;
 
 
 STR -> ram[dest + imm] = src
@@ -143,9 +143,9 @@ imm is a 6-bit signed number (min: -32, max: 31)
 e.g. `str r0 r1 5`
 
 0b1001_sssd_ddii_iiii
-s: src
-d: dest
-i: imm
+s: src;
+d: dest;
+i: imm;
 
 
 
@@ -157,17 +157,17 @@ src_flags are any combination of n (negative), z (zero), or p (positive)
 e.g. `br np 5`
 
 0b1010_nzpi_iiii_iiii
-n: negative (1 to jump)
-z: zero (1 to jump)
-p: positive (1 to jump)
-i: imm
+n: negative (1 to jump);
+z: zero (1 to jump);
+p: positive (1 to jump);
+i: imm;
 
 
 JMP -> pc = src
 e.g. `jmp r0`
 
 0b1011_sss0_0000_0000
-s: src
+s: src;
 
 
 JSR -> r7 = pc; pc += src
@@ -176,16 +176,16 @@ imm is a 11-bit number (min: -1024, max: 1023)
 e.g. `jsr r0` OR `jsr 5`
 
 0b1100_msss_iiii_iiii
-m: mode 0=reg 1=imm
-s: src/imm
-i: 0/imm
+m: mode 0=reg 1=imm;
+s: src/imm;
+i: 0/imm;
 
 
 LEA -> src = pc
 e.g. `lea r0`
 
 0b1101_sss0_0000_0000
-s: src
+s: src;
 
 
 RET -> pc = r7
