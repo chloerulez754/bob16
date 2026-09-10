@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <string.h>
-#include "instruction.h"
 
 #define REG_COUNT 8
 #define RAM_MAX 0x10000

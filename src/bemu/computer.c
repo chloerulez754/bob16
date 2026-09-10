@@ -1,6 +1,7 @@
 #include "computer.h"
 
 #include <stdbool.h>
+#include "instruction.h"
 
 static inline void initCPU(CPU *cpu) {
     memset(cpu->regFile, 0, REG_COUNT);
