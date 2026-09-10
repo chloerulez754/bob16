@@ -107,6 +107,13 @@ static void ldInstruction(BOB16 *bob16, bobWord word) {
     bob16->cpu.regFile[dest] = bob16->ram.memory[bob16->cpu.programCounter + offset];
 }
 
+static void ldiInstruction(BOB16 *bob16, bobWord word) {
+    size_t dest = word >> 9 & 0x7;
+    size_t operand = signExtend(word & 0x1FF, 9) + bob16->cpu.programCounter;
+    size_t offset = bob16->ram.memory[operand];
+    bob16->cpu.regFile[dest] = bob16->ram.memory[offset];
+}
+
 static void execute(BOB16 *bob16) {
     bobWord word = bob16->ram.memory[bob16->cpu.programCounter++];
     switch (getOpcode(word)) {
@@ -125,6 +132,7 @@ static void execute(BOB16 *bob16) {
             ldInstruction(bob16, word);
             return;
         case INS_LDI:
+            ldiInstruction(bob16, word);
             return;
         case INS_LDR:
             return;
@@ -308,12 +316,22 @@ int testLDInstruction(BOB16 *bob16) {
     clockCycle(bob16);
     if (bob16->cpu.regFile[0] != 0x0040) {
         fprintf(stderr, "ld doesn't work\n");
-        fprintf(stderr, "r0 should be 0x40, r0 is %X\n", bob16->cpu.regFile[0]);
+        fprintf(stderr, "r0 should be 0x40, r0 is 0x%X\n", bob16->cpu.regFile[0]);
+        return 1;
     }
     return 0;
 }
 
 int testLDIInstruction(BOB16 *bob16) {
+    bob16->ram.memory[0] = 0x5005;
+    bob16->ram.memory[6] = 0x0040;
+    bob16->ram.memory[0x40] = 0x0050;
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 0x0050) {
+        fprintf(stderr, "ldi doesn't work\n");
+        fprintf(stderr, "r0 should be 0x50, r0 is 0x%X\n", bob16->cpu.regFile[0]);
+        return 1;
+    }
     return 0;
 }
 
@@ -386,21 +404,21 @@ int main() {
     // TODO: Make all the rest of the integration tests 
 
     if (testLDInstruction(&bob16)) {
-        fprintf(stderr, "NOP instruction doesn't work\n");
+        fprintf(stderr, "LD instruction doesn't work\n");
         hadError = 1;
     }
 
     initBOB16(&bob16);
 
     if (testLDIInstruction(&bob16)) {
-        fprintf(stderr, "ADD instruction doesn't work\n");
+        fprintf(stderr, "LDI instruction doesn't work\n");
         hadError = 1;
     }
 
     initBOB16(&bob16);
 
     if (testLDRInstruction(&bob16)) {
-        fprintf(stderr, "AND instruction doesn't work\n");
+        fprintf(stderr, "LDR instruction doesn't work\n");
         hadError = 1;
     }
 
