@@ -6,6 +6,11 @@
 #include <string.h>
 #include "instruction.h"
 
+static bobWord signExtend(bobWord word, size_t length) {
+    size_t n = 16 - length;
+    return (bobWord)(word << n) >> n;
+}
+
 static inline void initCPU(CPU *cpu) {
     memset(cpu->regFile, 0, REG_COUNT);
     cpu->programCounter = 0;
@@ -24,53 +29,39 @@ static int getOpcode(bobWord word) {
     return (word >> 12) & 0xF;
 }
 
-static Instruction decode(BOB16 *bob16) {
-    // TODO: See if this decoding is a waste and can just use the opcode for the return
-    bobWord word = bob16->ram.memory[bob16->cpu.programCounter++];
-    if (bob16->cpu.programCounter >= RAM_MAX) {
-        fprintf(stderr, "TOO FAR");
-    }
-    switch(getOpcode(word)) {
-        case 0x0:
-            return INS_NOP;
-        case 0x1:
-            return INS_ADD;
-        case 0x2:
-            return INS_AND;
-        case 0x3:
-            return INS_NOT;
-        case 0x4:
-            return INS_LD;
-        case 0x5:
-            return INS_LDI;
-        case 0x6:
-            return INS_LDR;
-        case 0x7:
-            return INS_ST;
-        case 0x8:
-            return INS_STI;
-        case 0x9:
-            return INS_STR;
-        case 0xA:
-            return INS_BR;
-        case 0xB:
-            return INS_JMP;
-        case 0xC:
-            return INS_JSR;
-        case 0xD:
-            return INS_LEA;
-        case 0xE:
-            return INS_RET;
-        case 0xF:
-            return INS_TRAP;
+static void addInstruction(BOB16 *bob16, bobWord word) {
+    size_t dest = (word >> 7) & 0x7;
+    size_t reg = (word >> 4) & 0x7;
+    bobWord imm;
+
+    switch ((word >> 10) & 3) {
+        case 0:
+            // dest = reg + reg1
+            size_t reg1 = (word >> 1) & 0x7;
+            bob16->cpu.regFile[dest] = bob16->cpu.regFile[reg] + bob16->cpu.regFile[reg1];
+            break;
+        case 1:
+            // dest = reg + imm
+            imm = signExtend(word & 0xF, 4);
+            bob16->cpu.regFile[dest] = bob16->cpu.regFile[reg] + imm;
+            break;
+        case 2:
+            bob16->cpu.regFile[dest] += bob16->cpu.regFile[reg];
+            break;
+        case 3:
+            imm = signExtend(word & 0x7F, 7);
+            bob16->cpu.regFile[dest] += imm;
+            break;
     }
 }
 
-static void execute(BOB16 *bob16, Instruction instruction) {
-    switch (instruction) {
+static void execute(BOB16 *bob16) {
+    bobWord word = bob16->ram.memory[bob16->cpu.programCounter++];
+    switch (getOpcode(word)) {
         case INS_NOP:
             return;
         case INS_ADD:
+            addInstruction(bob16, word);
             return;
         case INS_AND:
             return;
@@ -99,13 +90,12 @@ static void execute(BOB16 *bob16, Instruction instruction) {
         case INS_RET:
             return;
         case INS_TRAP:
-            exit(0);
+            return;
     }
 }
 
 static void clockCycle(BOB16 *bob16) {
-    Instruction instruction = decode(bob16);
-    execute(bob16, instruction);
+    execute(bob16);
 }
 
 void run(BOB16 *bob16) {
@@ -115,48 +105,6 @@ void run(BOB16 *bob16) {
 }
 
 #ifdef TEST
-
-int testDecode(BOB16 *bob16) {
-    bobWord allInstructions[16] = {
-        0x0000, // NOP
-        0x1000, // ADD
-        0x2000, // AND
-        0x3000, // NOT
-        0x4000, // LD
-        0x5000, // LDI
-        0x6000, // LDR
-        0x7000, // ST
-        0x8000, // STI
-        0x9000, // STR
-        0xA000, // BR
-        0xB000, // JMP
-        0xC000, // JSR
-        0xD000, // LEA
-        0xE000, // RET
-        0xF000, // TRAP
-    };
-
-    memcpy(bob16->ram.memory, allInstructions, 16 * sizeof(bobWord));
-
-    if (decode(bob16) != INS_NOP)  { printf("NOP doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_ADD)  { printf("ADD doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_AND)  { printf("AND doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_NOT)  { printf("NOT doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_LD)   { printf("LD doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_LDI)  { printf("LDI doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_LDR)  { printf("LDR doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_ST)   { printf("ST doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_STI)  { printf("STI doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_STR)  { printf("STR doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_BR)   { printf("BR doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_JMP)  { printf("JMP doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_JSR)  { printf("JSR doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_LEA)  { printf("LEA doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_RET)  { printf("RET doesn't decode\n"); return 1; }
-    if (decode(bob16) != INS_TRAP) { printf("TRAP doesn't decode\n"); return 1; }
-
-    return 0;
-}
 
 int testNOPInstruction(BOB16 *bob16) {
     bobWord NOP = 0x0000;
@@ -179,7 +127,7 @@ int testADDInstruction(BOB16 *bob16) {
     // reg = reg + reg
     bob16->cpu.regFile[1] = 25;
     bob16->cpu.regFile[2] = 15;
-    bob16->ram.memory[0] = 0x1012;
+    bob16->ram.memory[0] = 0x1014;
     clockCycle(bob16);
     if (bob16->cpu.regFile[0] != 40) {
         fprintf(stderr, "`reg = reg + reg` does not work\n");
@@ -345,13 +293,6 @@ int main() {
 
     int hadError = 0;
 
-    if (testDecode(&bob16)) {
-        fprintf(stderr, "Decoding doesn't work\n");
-        hadError = 1;
-    }
-
-    initBOB16(&bob16);
-
     if (testNOPInstruction(&bob16)) {
         fprintf(stderr, "NOP instruction doesn't work\n");
         hadError = 1;
@@ -454,4 +395,4 @@ int main() {
     return hadError;
 }
 
-#endif
+#endif // TEST
