@@ -2,7 +2,6 @@
 #define _BOB16_COMPUTER_H
 
 #include <stdint.h>
-#include <stdlib.h>
 
 #define REG_COUNT 8
 #define RAM_MAX 0x10000
@@ -11,7 +10,7 @@ typedef int16_t bobWord;
 
 typedef struct CPU {
     bobWord regFile[REG_COUNT];
-    size_t programCounter;
+    uint16_t programCounter;
 } CPU;
 
 typedef struct RAM {

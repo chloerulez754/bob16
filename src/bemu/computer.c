@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "instruction.h"
 
@@ -147,9 +148,26 @@ static void jmpInstruction(BOB16 *bob16, bobWord word) {
     bob16->cpu.programCounter = (size_t)bob16->cpu.regFile[src];
 }
 
+static void jsrInstruction(BOB16 *bob16, bobWord word) {
+    if ((word >> 11 & 1) == 0) {
+        size_t src = word >> 8 & 0x7;
+        bob16->cpu.regFile[7] = bob16->cpu.programCounter;
+        int offset = bob16->cpu.regFile[src];
+        bob16->cpu.programCounter += offset;
+    } else {
+        int imm = signExtend(word & 0x7FF, 10);
+        bob16->cpu.regFile[7] = bob16->cpu.programCounter;
+        bob16->cpu.programCounter += imm;
+    }
+}
+
 static void leaInstruction(BOB16 *bob16, bobWord word) {
     size_t dest = word >> 9 & 0x7;
     bob16->cpu.regFile[dest] = (bobWord)bob16->cpu.programCounter;
+}
+
+static void retInstruction(BOB16 *bob16, bobWord word) {
+    bob16->cpu.programCounter = bob16->cpu.regFile[7];
 }
 
 static void execute(BOB16 *bob16) {
@@ -190,11 +208,13 @@ static void execute(BOB16 *bob16) {
             jmpInstruction(bob16, word);
             return;
         case INS_JSR:
+            jsrInstruction(bob16, word);
             return;
         case INS_LEA:
             leaInstruction(bob16, word);
             return;
         case INS_RET:
+            retInstruction(bob16, word);
             return;
         case INS_TRAP:
             return;
@@ -447,6 +467,34 @@ int testJMPInstruction(BOB16 *bob16) {
 }
 
 int testJSRInstruction(BOB16 *bob16) {
+    bob16->cpu.regFile[0] = 0x7000;
+    bob16->ram.memory[0] = 0xC000;
+    clockCycle(bob16);
+    if (bob16->cpu.programCounter != 0x7001) {
+        fprintf(stderr, "jsr doesn't work\n");
+        fprintf(stderr, "pc should be 0x7001, pc is 0x%X\n", bob16->cpu.programCounter);
+        return 1;
+    }
+    if (bob16->cpu.regFile[7] != 0x1) {
+        fprintf(stderr, "jsr doesn't work\n");
+        fprintf(stderr, "r7 should be 0x1, r7 is 0x%X\n", bob16->cpu.regFile[7]);
+        return 1;
+    }
+
+    initBOB16(bob16);
+
+    bob16->ram.memory[0] = 0xC870;
+    clockCycle(bob16);
+    if (bob16->cpu.programCounter != 0x0071) {
+        fprintf(stderr, "jsr doesn't work\n");
+        fprintf(stderr, "pc should be 0x71, pc is 0x%X\n", bob16->cpu.programCounter);
+        return 1;
+    }
+    if (bob16->cpu.regFile[7] != 0x1) {
+        fprintf(stderr, "jsr doesn't work\n");
+        fprintf(stderr, "r7 should be 0x1, r7 is 0x%X\n", bob16->cpu.regFile[7]);
+        return 1;
+    }
     return 0;
 }
 
@@ -463,6 +511,14 @@ int testLEAInstruction(BOB16 *bob16) {
 }
 
 int testRETInstruction(BOB16 *bob16) {
+    bob16->cpu.regFile[7] = 0x7000;
+    bob16->ram.memory[0] = 0xE000;
+    clockCycle(bob16);
+    if (bob16->cpu.programCounter != 0x7000) {
+        fprintf(stderr, "ret doesn't work\n");
+        fprintf(stderr, "pc should be 0x7000, pc is 0x%X\n", bob16->cpu.programCounter);
+        return 1;
+    }
     return 0;
 }
 
@@ -545,21 +601,21 @@ int main() {
     initBOB16(&bob16);
 
     if (testBRInstruction(&bob16)) {
-        fprintf(stderr, "AND instruction doesn't work\n");
+        fprintf(stderr, "BR instruction doesn't work\n");
         hadError = 1;
     }
 
     initBOB16(&bob16);
 
     if (testJMPInstruction(&bob16)) {
-        fprintf(stderr, "NOT instruction doesn't work\n");
+        fprintf(stderr, "JMP instruction doesn't work\n");
         hadError = 1;
     }
 
     initBOB16(&bob16);
 
     if (testJSRInstruction(&bob16)) {
-        fprintf(stderr, "NOP instruction doesn't work\n");
+        fprintf(stderr, "JSR instruction doesn't work\n");
         hadError = 1;
     }
 
@@ -573,7 +629,7 @@ int main() {
     initBOB16(&bob16);
 
     if (testRETInstruction(&bob16)) {
-        fprintf(stderr, "ADD instruction doesn't work\n");
+        fprintf(stderr, "RET instruction doesn't work\n");
         hadError = 1;
     }
 
