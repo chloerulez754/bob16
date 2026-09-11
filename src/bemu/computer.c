@@ -1,7 +1,6 @@
 #include "computer.h"
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "instruction.h"
@@ -143,6 +142,16 @@ static void strInstruction(BOB16 *bob16, bobWord word) {
     bob16->ram.memory[offset] = bob16->cpu.regFile[src];
 }
 
+static void jmpInstruction(BOB16 *bob16, bobWord word) {
+    size_t src = word >> 9 & 0x7;
+    bob16->cpu.programCounter = (size_t)bob16->cpu.regFile[src];
+}
+
+static void leaInstruction(BOB16 *bob16, bobWord word) {
+    size_t dest = word >> 9 & 0x7;
+    bob16->cpu.regFile[dest] = (bobWord)bob16->cpu.programCounter;
+}
+
 static void execute(BOB16 *bob16) {
     bobWord word = bob16->ram.memory[bob16->cpu.programCounter++];
     switch (getOpcode(word)) {
@@ -178,10 +187,12 @@ static void execute(BOB16 *bob16) {
         case INS_BR:
             return;
         case INS_JMP:
+            jmpInstruction(bob16, word);
             return;
         case INS_JSR:
             return;
         case INS_LEA:
+            leaInstruction(bob16, word);
             return;
         case INS_RET:
             return;
@@ -424,10 +435,30 @@ int testBRInstruction(BOB16 *bob16) {
 }
 
 int testJMPInstruction(BOB16 *bob16) {
+    bob16->cpu.regFile[0] = 0x7000;
+    bob16->ram.memory[0] = 0xB000;
+    clockCycle(bob16);
+    if (bob16->cpu.programCounter != 0x7000) {
+        fprintf(stderr, "jmp doesn't work\n");
+        fprintf(stderr, "pc should be 0x7000, pc is 0x%X\n", bob16->cpu.programCounter);
+        return 1;
+    }
     return 0;
 }
 
 int testJSRInstruction(BOB16 *bob16) {
+    return 0;
+}
+
+int testLEAInstruction(BOB16 *bob16) {
+    bob16->cpu.programCounter = 0x7000;
+    bob16->ram.memory[0x7000] = 0xD000;
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 0x7001) {
+        fprintf(stderr, "lea doesn't work\n");
+        fprintf(stderr, "r0 should be 0x7001, r0 is 0x%X\n", bob16->cpu.regFile[0]);
+        return 1;
+    }
     return 0;
 }
 
@@ -529,6 +560,13 @@ int main() {
 
     if (testJSRInstruction(&bob16)) {
         fprintf(stderr, "NOP instruction doesn't work\n");
+        hadError = 1;
+    }
+
+    initBOB16(&bob16);
+
+    if (testLEAInstruction(&bob16)) {
+        fprintf(stderr, "LEA doesn't work\n");
         hadError = 1;
     }
 
