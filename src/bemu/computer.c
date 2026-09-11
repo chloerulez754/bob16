@@ -22,13 +22,13 @@ static void setFlags(BOB16 *bob16, bobWord value) {
 }
 
 static void initCPU(CPU *cpu) {
-    memset(cpu->regFile, 0, REG_COUNT);
+    memset(cpu->regFile, 0, REG_COUNT * sizeof(bobWord));
     cpu->programCounter = 0;
     cpu->flags = 0;
 }
 
 static void initRAM(RAM *ram) {
-    memset(ram->memory, 0, RAM_MAX);
+    memset(ram->memory, 0, RAM_MAX * sizeof(bobWord));
 }
 
 void initBOB16(BOB16 *bob16) {
@@ -216,8 +216,34 @@ static void leaInstruction(BOB16 *bob16, bobWord word) {
     setFlags(bob16, bob16->cpu.regFile[dest]);
 }
 
-static void retInstruction(BOB16 *bob16, bobWord word) {
+static void retInstruction(BOB16 *bob16) {
     bob16->cpu.programCounter = bob16->cpu.regFile[7];
+}
+
+static void trapInstruction(BOB16 *bob16, bobWord word) {
+    switch (word & 0xFFF) {
+        case 0:
+            exit(EXIT_SUCCESS);
+        case 1:
+            putc(bob16->cpu.regFile[0] & 0xF, stdout);
+            return;
+        case 2:
+            char *c = (char *)&bob16->ram.memory[bob16->cpu.regFile[0]];
+            while (*c != '\0') {
+                putc(*c, stdout);
+                c = c + 1;
+            }
+            return;
+        case 3:
+            size_t n = bob16->cpu.regFile[1];
+            char buf[n];
+            fgets(buf, n, stdin);
+            for (size_t i = 0; i < n; i++) {
+                bob16->ram.memory[bob16->cpu.regFile[0] + i] = buf[i];
+            }
+            return;
+    }
+    fprintf(stderr, "Not a valid trap number: %X", word & 0xFFF);
 }
 
 static void execute(BOB16 *bob16) {
@@ -265,9 +291,10 @@ static void execute(BOB16 *bob16) {
             leaInstruction(bob16, word);
             return;
         case INS_RET:
-            retInstruction(bob16, word);
+            retInstruction(bob16);
             return;
         case INS_TRAP:
+            trapInstruction(bob16, word);
             return;
     }
 }
