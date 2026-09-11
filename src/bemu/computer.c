@@ -11,12 +11,23 @@ static bobWord signExtend(bobWord word, size_t length) {
     return (bobWord)(word << n) >> n;
 }
 
-static inline void initCPU(CPU *cpu) {
-    memset(cpu->regFile, 0, REG_COUNT);
-    cpu->programCounter = 0;
+static void setFlags(BOB16 *bob16, bobWord value) {
+    if (value < 0) {
+        bob16->cpu.flags = 0b001;
+    } else if (value > 0) {
+        bob16->cpu.flags = 0b100;
+    } else {
+        bob16->cpu.flags = 0b010;
+    }
 }
 
-static inline void initRAM(RAM *ram) {
+static void initCPU(CPU *cpu) {
+    memset(cpu->regFile, 0, REG_COUNT);
+    cpu->programCounter = 0;
+    cpu->flags = 0;
+}
+
+static void initRAM(RAM *ram) {
     memset(ram->memory, 0, RAM_MAX);
 }
 
@@ -33,78 +44,97 @@ static void addInstruction(BOB16 *bob16, bobWord word) {
     size_t dest = (word >> 7) & 0x7;
     size_t reg = (word >> 4) & 0x7;
     bobWord imm;
+    bobWord value;
 
     switch ((word >> 10) & 3) {
         case 0:
             // dest = reg + reg1
             size_t reg1 = (word >> 1) & 0x7;
-            bob16->cpu.regFile[dest] = bob16->cpu.regFile[reg] + bob16->cpu.regFile[reg1];
+            value = bob16->cpu.regFile[reg] + bob16->cpu.regFile[reg1];
+            bob16->cpu.regFile[dest] = value;
             break;
         case 1:
             // dest = reg + imm
             imm = signExtend(word & 0xF, 4);
-            bob16->cpu.regFile[dest] = bob16->cpu.regFile[reg] + imm;
+            value = bob16->cpu.regFile[reg] + imm;
+            bob16->cpu.regFile[dest];
             break;
         case 2:
             // dest += reg
-            bob16->cpu.regFile[dest] += bob16->cpu.regFile[reg];
+            value = bob16->cpu.regFile[dest] + bob16->cpu.regFile[reg];
+            bob16->cpu.regFile[dest] = value;
             break;
         case 3:
             // dest += imm
             imm = signExtend(word & 0x7F, 7);
-            bob16->cpu.regFile[dest] += imm;
+            value = bob16->cpu.regFile[dest] + imm;
+            bob16->cpu.regFile[dest] = value;
             break;
     }
+    setFlags(bob16, value);
 }
 
 static void andInstruction(BOB16 *bob16, bobWord word) {
     size_t dest = (word >> 7) & 0x7;
     size_t reg = (word >> 4) & 0x7;
     bobWord imm;
+    bobWord value;
 
     switch ((word >> 10) & 3) {
         case 0:
-            // dest = reg & reg1
+            // dest = reg + reg1
             size_t reg1 = (word >> 1) & 0x7;
-            bob16->cpu.regFile[dest] = bob16->cpu.regFile[reg] & bob16->cpu.regFile[reg1];
+            value = bob16->cpu.regFile[reg] & bob16->cpu.regFile[reg1];
+            bob16->cpu.regFile[dest] = value;
             break;
         case 1:
-            // dest = reg & imm
-            imm = word & 0xF;
-            bob16->cpu.regFile[dest] = bob16->cpu.regFile[reg] & imm;
+            // dest = reg + imm
+            imm = signExtend(word & 0xF, 4);
+            value = bob16->cpu.regFile[reg] & imm;
+            bob16->cpu.regFile[dest];
             break;
         case 2:
-            // dest &= reg
-            bob16->cpu.regFile[dest] &= bob16->cpu.regFile[reg];
+            // dest += reg
+            value = bob16->cpu.regFile[dest] & bob16->cpu.regFile[reg];
+            bob16->cpu.regFile[dest] = value;
             break;
         case 3:
-            // dest &= imm
-            imm = word & 0x7F;
-            bob16->cpu.regFile[dest] &= imm;
+            // dest += imm
+            imm = signExtend(word & 0x7F, 7);
+            value = bob16->cpu.regFile[dest] & imm;
+            bob16->cpu.regFile[dest] = value;
             break;
     }
 }
 
 static void notInstruction(BOB16 *bob16, bobWord word) {
+    bobWord value;
+
     if ((word >> 11 & 1) == 0) {
         size_t dest = (word >> 7) & 0x7;
         if ((word >> 10 & 1) == 0) {
             size_t src = (word >> 4) & 0x7;
-            bob16->cpu.regFile[dest] = ~bob16->cpu.regFile[src];
+            value = ~bob16->cpu.regFile[src];
+            bob16->cpu.regFile[dest] = value;
         } else {
             bobWord imm = word & 0x7F;
-            bob16->cpu.regFile[dest] = ~imm;
+            value = ~imm;
+            bob16->cpu.regFile[dest] = value;
         }
     } else {
         size_t dest = (word >> 8) & 0x7;
-        bob16->cpu.regFile[dest] = ~bob16->cpu.regFile[dest];
+        value = ~bob16->cpu.regFile[dest];
+        bob16->cpu.regFile[dest] = value;
     }
+
+    setFlags(bob16, value);
 }
 
 static void ldInstruction(BOB16 *bob16, bobWord word) {
     size_t dest = word >> 9 & 0x7;
     int offset = signExtend(word & 0x1FF, 9);
     bob16->cpu.regFile[dest] = bob16->ram.memory[bob16->cpu.programCounter + offset];
+    setFlags(bob16, bob16->cpu.regFile[dest]);
 }
 
 static void ldiInstruction(BOB16 *bob16, bobWord word) {
@@ -112,6 +142,7 @@ static void ldiInstruction(BOB16 *bob16, bobWord word) {
     size_t operand = signExtend(word & 0x1FF, 9) + bob16->cpu.programCounter;
     size_t offset = bob16->ram.memory[operand];
     bob16->cpu.regFile[dest] = bob16->ram.memory[offset];
+    setFlags(bob16, bob16->cpu.regFile[dest]);
 }
 
 static void ldrInstruction(BOB16 *bob16, bobWord word) {
@@ -120,6 +151,7 @@ static void ldrInstruction(BOB16 *bob16, bobWord word) {
     int imm = word & 0x3F;
     size_t offset = imm  + bob16->cpu.regFile[src];
     bob16->cpu.regFile[dest] = bob16->ram.memory[offset];
+    setFlags(bob16, bob16->cpu.regFile[dest]);
 }
 
 static void stInstruction(BOB16 *bob16, bobWord word) {
@@ -143,6 +175,23 @@ static void strInstruction(BOB16 *bob16, bobWord word) {
     bob16->ram.memory[offset] = bob16->cpu.regFile[src];
 }
 
+static void brInstruction(BOB16 *bob16, bobWord word) {
+    int n = word >> 11;
+    int z = word >> 10;
+    int p = word >> 9;
+    int imm = word & 0x1FF;
+
+    if (n && bob16->cpu.flags >> 0) {
+        bob16->cpu.programCounter = imm;
+    }
+    if (z && bob16->cpu.flags >> 1) {
+        bob16->cpu.programCounter = imm;
+    }
+    if (p && bob16->cpu.flags >> 2) {
+        bob16->cpu.programCounter = imm;
+    }
+}
+
 static void jmpInstruction(BOB16 *bob16, bobWord word) {
     size_t src = word >> 9 & 0x7;
     bob16->cpu.programCounter = (size_t)bob16->cpu.regFile[src];
@@ -164,6 +213,7 @@ static void jsrInstruction(BOB16 *bob16, bobWord word) {
 static void leaInstruction(BOB16 *bob16, bobWord word) {
     size_t dest = word >> 9 & 0x7;
     bob16->cpu.regFile[dest] = (bobWord)bob16->cpu.programCounter;
+    setFlags(bob16, bob16->cpu.regFile[dest]);
 }
 
 static void retInstruction(BOB16 *bob16, bobWord word) {
@@ -203,6 +253,7 @@ static void execute(BOB16 *bob16) {
             strInstruction(bob16, word);
             return;
         case INS_BR:
+            brInstruction(bob16, word);
             return;
         case INS_JMP:
             jmpInstruction(bob16, word);

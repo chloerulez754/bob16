@@ -11,6 +11,7 @@ typedef int16_t bobWord;
 typedef struct CPU {
     bobWord regFile[REG_COUNT];
     uint16_t programCounter;
+    uint8_t flags;
 } CPU;
 
 typedef struct RAM {
