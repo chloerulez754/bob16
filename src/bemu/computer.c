@@ -57,7 +57,7 @@ static void addInstruction(BOB16 *bob16, bobWord word) {
             // dest = reg + imm
             imm = signExtend(word & 0xF, 4);
             value = bob16->cpu.regFile[reg] + imm;
-            bob16->cpu.regFile[dest];
+            bob16->cpu.regFile[dest] = value;
             break;
         case 2:
             // dest += reg
@@ -91,7 +91,7 @@ static void andInstruction(BOB16 *bob16, bobWord word) {
             // dest = reg + imm
             imm = signExtend(word & 0xF, 4);
             value = bob16->cpu.regFile[reg] & imm;
-            bob16->cpu.regFile[dest];
+            bob16->cpu.regFile[dest] = value;
             break;
         case 2:
             // dest += reg
