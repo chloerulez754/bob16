@@ -103,7 +103,7 @@ static void notInstruction(BOB16 *bob16, bobWord word) {
 
 static void ldInstruction(BOB16 *bob16, bobWord word) {
     size_t dest = word >> 9 & 0x7;
-    size_t offset = signExtend(word & 0x1FF, 9);
+    int offset = signExtend(word & 0x1FF, 9);
     bob16->cpu.regFile[dest] = bob16->ram.memory[bob16->cpu.programCounter + offset];
 }
 
@@ -112,6 +112,35 @@ static void ldiInstruction(BOB16 *bob16, bobWord word) {
     size_t operand = signExtend(word & 0x1FF, 9) + bob16->cpu.programCounter;
     size_t offset = bob16->ram.memory[operand];
     bob16->cpu.regFile[dest] = bob16->ram.memory[offset];
+}
+
+static void ldrInstruction(BOB16 *bob16, bobWord word) {
+    size_t dest = word >> 9 & 0x7;
+    size_t src = word >> 6 & 0x7;
+    int imm = word & 0x3F;
+    size_t offset = imm  + bob16->cpu.regFile[src];
+    bob16->cpu.regFile[dest] = bob16->ram.memory[offset];
+}
+
+static void stInstruction(BOB16 *bob16, bobWord word) {
+    size_t src = word >> 9 & 0x7;
+    int offset = signExtend(word & 0x1FF, 9);
+    bob16->ram.memory[offset + bob16->cpu.programCounter] = bob16->cpu.regFile[src];
+}
+
+static void stiInstruction(BOB16 *bob16, bobWord word) {
+    size_t src = word >> 9 & 0x7;
+    size_t operand = signExtend(word & 0x1FF, 9) + bob16->cpu.programCounter;
+    size_t offset = bob16->ram.memory[operand];
+    bob16->ram.memory[offset] = bob16->cpu.regFile[src];
+}
+
+static void strInstruction(BOB16 *bob16, bobWord word) {
+    size_t src = word >> 9 & 0x7;
+    size_t dest = word >> 6 & 0x7;
+    int imm = word & 0x3F;
+    size_t offset = imm  + bob16->cpu.regFile[dest];
+    bob16->ram.memory[offset] = bob16->cpu.regFile[src];
 }
 
 static void execute(BOB16 *bob16) {
@@ -135,12 +164,16 @@ static void execute(BOB16 *bob16) {
             ldiInstruction(bob16, word);
             return;
         case INS_LDR:
+            ldrInstruction(bob16, word);
             return;
         case INS_ST:
+            stInstruction(bob16, word);
             return;
         case INS_STI:
+            stiInstruction(bob16, word);
             return;
         case INS_STR:
+            strInstruction(bob16, word);
             return;
         case INS_BR:
             return;
@@ -336,18 +369,53 @@ int testLDIInstruction(BOB16 *bob16) {
 }
 
 int testLDRInstruction(BOB16 *bob16) {
+    bob16->cpu.regFile[1] = 0x0050;
+    bob16->ram.memory[0] = 0x6045;
+    bob16->ram.memory[0x55] = 0x0040;
+    clockCycle(bob16);
+    if (bob16->cpu.regFile[0] != 0x0040) {
+        fprintf(stderr, "ldr doesn't work\n");
+        fprintf(stderr, "r0 should be 0x40, r0 is 0x%X\n", bob16->cpu.regFile[0]);
+        return 1;
+    }
     return 0;
 }
 
 int testSTInstruction(BOB16 *bob16) {
+    bob16->cpu.regFile[0] = 0x0040;
+    bob16->ram.memory[0] = 0x7005;
+    clockCycle(bob16);
+    if (bob16->ram.memory[6] != 0x0040) {
+        fprintf(stderr, "st doesn't work\n");
+        fprintf(stderr, "ram[6] should be 0x40, ram[6] is 0x%X\n", bob16->ram.memory[6]);
+        return 1;
+    }
     return 0;
 }
 
 int testSTIInstruction(BOB16 *bob16) {
+    bob16->cpu.regFile[0] = 0x0050;
+    bob16->ram.memory[0] = 0x8005;
+    bob16->ram.memory[6] = 0x0040;
+    clockCycle(bob16);
+    if (bob16->ram.memory[0x40] != 0x0050) {
+        fprintf(stderr, "sti doesn't work\n");
+        fprintf(stderr, "ram[0x40] should be 0x50, ram[0x40] is 0x%X\n", bob16->ram.memory[0x40]);
+        return 1;
+    }
     return 0;
 }
 
 int testSTRInstruction(BOB16 *bob16) {
+    bob16->cpu.regFile[0] = 0x0040;
+    bob16->cpu.regFile[1] = 0x0050;
+    bob16->ram.memory[0] = 0x9045;
+    clockCycle(bob16);
+    if (bob16->ram.memory[0x55] != 0x0040) {
+        fprintf(stderr, "str doesn't work\n");
+        fprintf(stderr, "ram[0x55] should be 0x40, ram[0x55] is 0x%X\n", bob16->ram.memory[0x55]);
+        return 1;
+    }
     return 0;
 }
 
@@ -425,21 +493,21 @@ int main() {
     initBOB16(&bob16);
 
     if (testSTInstruction(&bob16)) {
-        fprintf(stderr, "NOT instruction doesn't work\n");
+        fprintf(stderr, "ST instruction doesn't work\n");
         hadError = 1;
     }
 
     initBOB16(&bob16);
 
     if (testSTIInstruction(&bob16)) {
-        fprintf(stderr, "NOP instruction doesn't work\n");
+        fprintf(stderr, "STI instruction doesn't work\n");
         hadError = 1;
     }
 
     initBOB16(&bob16);
 
     if (testSTRInstruction(&bob16)) {
-        fprintf(stderr, "ADD instruction doesn't work\n");
+        fprintf(stderr, "STR instruction doesn't work\n");
         hadError = 1;
     }
 
