@@ -6,12 +6,12 @@
 #include <string.h>
 #include "instruction.h"
 
-static bobWord signExtend(bobWord word, size_t length) {
+static int16_t signExtend(bobWord word, size_t length) {
     size_t n = 16 - length;
     return (bobWord)(word << n) >> n;
 }
 
-static void setFlags(BOB16 *bob16, bobWord value) {
+static void setFlags(BOB16 *bob16, int16_t value) {
     if (value < 0) {
         bob16->cpu.flags = 0b001;
     } else if (value > 0) {
@@ -43,15 +43,15 @@ static int getOpcode(bobWord word) {
 static void addInstruction(BOB16 *bob16, bobWord word) {
     size_t dest = (word >> 7) & 0x7;
     size_t reg = (word >> 4) & 0x7;
-    bobWord imm;
-    bobWord value;
+    int16_t imm;
+    int16_t value;
 
     switch ((word >> 10) & 3) {
         case 0:
             // dest = reg + reg1
             size_t reg1 = (word >> 1) & 0x7;
-            value = bob16->cpu.regFile[reg] + bob16->cpu.regFile[reg1];
-            bob16->cpu.regFile[dest] = value;
+            value = (int16_t)bob16->cpu.regFile[reg] + (int16_t)bob16->cpu.regFile[reg1];
+            bob16->cpu.regFile[dest] = (bobWord)value;
             break;
         case 1:
             // dest = reg + imm
@@ -132,7 +132,7 @@ static void notInstruction(BOB16 *bob16, bobWord word) {
 
 static void ldInstruction(BOB16 *bob16, bobWord word) {
     size_t dest = word >> 9 & 0x7;
-    int offset = signExtend(word & 0x1FF, 9);
+    int16_t offset = signExtend(word & 0x1FF, 9);
     bob16->cpu.regFile[dest] = bob16->ram.memory[bob16->cpu.programCounter + offset];
     setFlags(bob16, bob16->cpu.regFile[dest]);
 }
@@ -148,7 +148,7 @@ static void ldiInstruction(BOB16 *bob16, bobWord word) {
 static void ldrInstruction(BOB16 *bob16, bobWord word) {
     size_t dest = word >> 9 & 0x7;
     size_t src = word >> 6 & 0x7;
-    int imm = word & 0x3F;
+    int16_t imm = word & 0x3F;
     size_t offset = imm  + bob16->cpu.regFile[src];
     bob16->cpu.regFile[dest] = bob16->ram.memory[offset];
     setFlags(bob16, bob16->cpu.regFile[dest]);
@@ -156,7 +156,7 @@ static void ldrInstruction(BOB16 *bob16, bobWord word) {
 
 static void stInstruction(BOB16 *bob16, bobWord word) {
     size_t src = word >> 9 & 0x7;
-    int offset = signExtend(word & 0x1FF, 9);
+    int16_t offset = signExtend(word & 0x1FF, 9);
     bob16->ram.memory[offset + bob16->cpu.programCounter] = bob16->cpu.regFile[src];
 }
 
@@ -170,16 +170,16 @@ static void stiInstruction(BOB16 *bob16, bobWord word) {
 static void strInstruction(BOB16 *bob16, bobWord word) {
     size_t src = word >> 9 & 0x7;
     size_t dest = word >> 6 & 0x7;
-    int imm = word & 0x3F;
+    int16_t imm = word & 0x3F;
     size_t offset = imm  + bob16->cpu.regFile[dest];
     bob16->ram.memory[offset] = bob16->cpu.regFile[src];
 }
 
 static void brInstruction(BOB16 *bob16, bobWord word) {
-    int n = word >> 11;
-    int z = word >> 10;
-    int p = word >> 9;
-    int imm = word & 0x1FF;
+    int16_t n = word >> 11;
+    int16_t z = word >> 10;
+    int16_t p = word >> 9;
+    int16_t imm = word & 0x1FF;
 
     if (n && bob16->cpu.flags >> 0) {
         bob16->cpu.programCounter = imm;
@@ -201,10 +201,10 @@ static void jsrInstruction(BOB16 *bob16, bobWord word) {
     if ((word >> 11 & 1) == 0) {
         size_t src = word >> 8 & 0x7;
         bob16->cpu.regFile[7] = bob16->cpu.programCounter;
-        int offset = bob16->cpu.regFile[src];
+        int16_t offset = bob16->cpu.regFile[src];
         bob16->cpu.programCounter += offset;
     } else {
-        int imm = signExtend(word & 0x7FF, 10);
+        int16_t imm = signExtend(word & 0x7FF, 10);
         bob16->cpu.regFile[7] = bob16->cpu.programCounter;
         bob16->cpu.programCounter += imm;
     }
@@ -228,9 +228,9 @@ static void trapInstruction(BOB16 *bob16, bobWord word) {
             putc(bob16->cpu.regFile[0] & 0xF, stdout);
             return;
         case 2:
-            char *c = (char *)&bob16->ram.memory[bob16->cpu.regFile[0]];
+            uint16_t *c = &bob16->ram.memory[bob16->cpu.regFile[0]];
             while (*c != '\0') {
-                putc(*c, stdout);
+                putc((char)(*c), stdout);
                 c = c + 1;
             }
             return;
