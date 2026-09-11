@@ -427,16 +427,16 @@ int testNOTInstruction(BOB16 *bob16) {
     clockCycle(bob16);
     if (bob16->cpu.regFile[0] != 0x0F0F) {
         fprintf(stderr, "`reg = ~reg` does not work\n");
-        fprintf(stderr, "r0 should be 0x0F0F, r0 is %X\n", bob16->cpu.regFile[0]);
+        fprintf(stderr, "r0 should be 0x0F0F, r0 is 0x%X\n", bob16->cpu.regFile[0]);
         return 1;
     }
 
     // reg = ~imm
     bob16->ram.memory[1] = 0x347A;
     clockCycle(bob16);
-    if (bob16->cpu.regFile[0] != ~0x7A) {
+    if (bob16->cpu.regFile[0] != 0xFF85) {
         fprintf(stderr, "`reg = ~imm` does not work\n");
-        fprintf(stderr, "r0 should be 0xFF85, r0 is %X\n", bob16->cpu.regFile[0]);
+        fprintf(stderr, "r0 should be 0xFF85, r0 is 0x%X\n", bob16->cpu.regFile[0]);
         return 1;
     }
 
@@ -444,9 +444,9 @@ int testNOTInstruction(BOB16 *bob16) {
     bob16->cpu.regFile[0] = 0x0F0F;
     bob16->ram.memory[2] = 0x3800; // not r0
     clockCycle(bob16);
-    if (bob16->cpu.regFile[0] != ~0x0F0F) {
+    if (bob16->cpu.regFile[0] != 0xF0F0) {
         fprintf(stderr, "`~=reg` does not work\n");
-        fprintf(stderr, "r0 should be 0xF0F0, r0 is %X\n", bob16->cpu.regFile[0]);
+        fprintf(stderr, "r0 should be 0xF0F0, r0 is 0x%X\n", bob16->cpu.regFile[0]);
         return 1;
     }
     return 0;
